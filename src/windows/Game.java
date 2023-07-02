@@ -9,6 +9,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
 import java.util.Random;
 
 import static java.awt.event.KeyEvent.*;
@@ -19,10 +20,9 @@ public class Game extends JFrame implements KeyListener {
     private final JPanel panelTable = new JPanel(new BorderLayout());
     private static int i = 7;
     private static int j = 12;
+    private static ArrayList<ArrayList<Integer>> tail = new ArrayList<>();
     private static int keyPressed;
     private static int score = 0;
-    private static int appleI = 7;
-    private static int appleJ = 17;
     private static boolean inGame = true;
 
     public static void setI(int i) {
@@ -33,12 +33,8 @@ public class Game extends JFrame implements KeyListener {
         Game.j = j;
     }
 
-    public static void setAppleI(int appleI) {
-        Game.appleI = appleI;
-    }
-
-    public static void setAppleJ(int appleJ) {
-        Game.appleJ = appleJ;
+    public static ArrayList<ArrayList<Integer>> getTail() {
+        return tail;
     }
 
     public Game() {
@@ -79,14 +75,24 @@ public class Game extends JFrame implements KeyListener {
         new Thread(() -> {
             while (inGame)
                 moveSnake();
-            System.exit(-100);
+            String name = JOptionPane.showInputDialog(null, "Enter a nickname.", "Input name", JOptionPane.PLAIN_MESSAGE);
+
+            if (name == null || name.isEmpty())
+                JOptionPane.showMessageDialog(null, "You wrote nothing.", "Error", JOptionPane.ERROR_MESSAGE);
+            else {
+                Score.writeInFile(name, score, name.length());
+                SwingUtilities.invokeLater(Score::new);
+            }
+            reset();
+            jframe.dispose();
         }).start();
 
         new Thread(() -> {
             while (inGame) {
                 scoreLabel.setText("Score: " + score);
                 scoreLabel.repaint();
-
+                if (score == 32000)
+                    inGame = false;
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
@@ -104,12 +110,9 @@ public class Game extends JFrame implements KeyListener {
                 table.setIntercellSpacing(new Dimension(0, 0));
                 JLabel label = new JLabel();
 
-                if (value instanceof ImageIcon) {
-                    ImageIcon imageIcon = (ImageIcon) value;
-
+                if (value instanceof ImageIcon imageIcon)
                     label.setIcon(imageIcon);
-                } else if (value instanceof JLabel) {
-                    JLabel jLabel = (JLabel) value;
+                else if (value instanceof JLabel jLabel) {
                     panelTable.repaint();
                     return jLabel;
                 }
@@ -132,22 +135,63 @@ public class Game extends JFrame implements KeyListener {
 
     public void moveSnakeCoordinates(int iN, int jN) {
         switch (tableModel.getItems()[i + iN][j + jN]) {
-            case 0 -> {
+            case 0, 5 -> {
                 inGame = false;
                 return;
             }
             case 3 -> {
                 score += 100;
-                Random random = new Random();
-                int randomI = random.nextInt(14) + 1;
-                int randomJ = random.nextInt(23) + 1;
-                tableModel.getItems()[randomI][randomJ] = 3;
+                spawnApple();
+                ArrayList<Integer> integers = new ArrayList<>();
+                switch (keyPressed) {
+                    case KeyEvent.VK_RIGHT -> {
+                        integers.add(tail.get(tail.size() - 1).get(0));
+                        integers.add(tail.get(tail.size() - 1).get(1) - 1);
+                    }
+                    case KeyEvent.VK_LEFT -> {
+                        integers.add(tail.get(tail.size() - 1).get(0));
+                        integers.add(tail.get(tail.size() - 1).get(1) + 1);
+                    }
+                    case KeyEvent.VK_DOWN -> {
+                        integers.add(tail.get(tail.size() - 1).get(0) - 1);
+                        integers.add(tail.get(tail.size() - 1).get(1));
+                    }
+                    case KeyEvent.VK_UP -> {
+                        integers.add(tail.get(tail.size() - 1).get(0) + 1);
+                        integers.add(tail.get(tail.size() - 1).get(1));
+                    }
+                }
+                getTail().add(integers);
             }
         }
-        tableModel.getItems()[i][j] = 1;
         tableModel.getItems()[i + iN][j + jN] = 4;
+        tableModel.getItems()[i][j] = 5;
+        for (int iT = 0; iT < tail.size(); iT++)
+            if (iT == tail.size() - 1)
+                tableModel.getItems()[tail.get(iT).get(0)][tail.get(iT).get(1)] = 1;
+            else
+                tableModel.getItems()[tail.get(iT + 1).get(0)][tail.get(iT + 1).get(1)] = 5;
+
+        for (int iT = tail.size() - 1; iT >= 0; iT--)
+            if (iT == 0) {
+                tail.get(iT).set(0, i);
+                tail.get(iT).set(1, j);
+            } else {
+                tail.get(iT).set(0, tail.get(iT - 1).get(0));
+                tail.get(iT).set(1, tail.get(iT - 1).get(1));
+            }
         i += iN;
         j += jN;
+    }
+
+    public void spawnApple() {
+        Random random = new Random();
+        int randomI = random.nextInt(14) + 1;
+        int randomJ = random.nextInt(23) + 1;
+        if (tableModel.getItems()[randomI][randomJ] != 4 && tableModel.getItems()[randomI][randomJ] != 5)
+            tableModel.getItems()[randomI][randomJ] = 3;
+        else
+            spawnApple();
     }
 
     public void moveSnake() {
@@ -158,10 +202,18 @@ public class Game extends JFrame implements KeyListener {
             case KeyEvent.VK_UP -> moveSnakeCoordinates(-1, 0);
         }
         try {
-            Thread.sleep(100);
+            Thread.sleep(300);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void reset() {
+        keyPressed = 0;
+        tail = new ArrayList<>();
+        score = 0;
+        inGame = true;
+        keyPressed = 0;
     }
 
     @Override

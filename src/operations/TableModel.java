@@ -5,11 +5,10 @@ import windows.Game;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.util.ArrayList;
 
 public class TableModel extends AbstractTableModel {
-
-    private int[][] items;
-    boolean inGame = true;
+    private final int[][] items;
 
     public TableModel() {
         this.items = createBoard();
@@ -34,8 +33,8 @@ public class TableModel extends AbstractTableModel {
         switch (items[rowIndex][columnIndex]) {
             case 0 -> {
                 JLabel border = new JLabel();
-                border.setBackground(new Color(12, 65, 0));
-                border.setBorder(BorderFactory.createLineBorder(new Color(12, 65, 0)));
+                border.setBackground(Color.RED);
+                border.setBorder(BorderFactory.createLineBorder(Color.RED));
                 border.setOpaque(true);
                 return border;
             }
@@ -50,14 +49,13 @@ public class TableModel extends AbstractTableModel {
                 return snake;
             }
             case 5 -> {
-                JLabel snake = new JLabel();
-                snake.setBackground(Color.RED);
-                snake.setBorder(BorderFactory.createLineBorder(Color.RED));
-                snake.setOpaque(true);
-                return snake;
+                JLabel tail = new JLabel();
+                tail.setBackground(Color.WHITE);
+                tail.setBorder(BorderFactory.createLineBorder(Color.WHITE));
+                tail.setOpaque(true);
+                return tail;
             }
         }
-
 
         return null;
     }
@@ -77,10 +75,11 @@ public class TableModel extends AbstractTableModel {
         matrix[7][17] = 3;
         Game.setI(7);
         Game.setJ(12);
-        Game.setAppleI(7);
-        Game.setAppleJ(17);
+        ArrayList<Integer> integers = new ArrayList<>();
+        integers.add(7);
+        integers.add(11);
+        Game.getTail().add(integers);
 
         return matrix;
     }
-
 }
